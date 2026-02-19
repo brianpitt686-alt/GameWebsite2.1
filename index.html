@@ -80,13 +80,14 @@
     .btn{border:1px solid var(--neon);background:transparent;color:var(--neon);padding:6px 12px;border-radius:10px;cursor:pointer}
     .btn:hover{background:var(--neon);color:#00131f}
     iframe{flex:1;border:0}
+    .footer-hint { opacity: 0.5; font-size: 11px; margin-top: 10px; text-align: center; }
   </style>
 </head>
 <body>
   <header>
     <div class="brand">
-      <img src="favicon.png" alt="IXL"/>
-      <h1>IXL</h1>
+      <img src="baby-ai.gif" alt="IXL"/>
+      <h1>Brians Games</h1>
     </div>
     <div class="actions">
       <input id="search" class="search" placeholder="Search..."/>
@@ -113,6 +114,7 @@
         </select>
         <button class="add-btn" onclick="addCustom()">Add</button>
       </div>
+      <p class="footer-hint">Tip: Double-click a custom card to delete it.</p>
     </div>
   </main>
 
@@ -166,13 +168,37 @@ const titleEl = document.getElementById('playerTitle');
 const openNew = document.getElementById('openNew');
 const closeBtn= document.getElementById('close');
 
-function card(item){
+function card(item, index, isCustom, type){
   const d=document.createElement('div');
   d.className='card';
   const thumbUrl = item.thumb || 'https://cdn.vectorstock.com/i/1000v/78/41/browser-icon-white-background-vector-20757841.jpg';
   d.innerHTML=`<div class="thumb" style="background-image:url('${thumbUrl}')"></div><div class="title">${item.title}</div>`;
-  d.onclick=()=>openItem(item);
+  
+  // Single click opens
+  d.onclick = () => openItem(item);
+  
+  // Double click deletes (Only for custom items)
+  if(isCustom) {
+    d.ondblclick = (e) => {
+        e.stopPropagation();
+        if(confirm(`Delete "${item.title}"?`)) {
+            deleteItem(index, type);
+        }
+    };
+  }
+  
   return d;
+}
+
+function deleteItem(index, type) {
+    if(type === 'games') {
+        customGames.splice(index, 1);
+        localStorage.setItem('customGames', JSON.stringify(customGames));
+    } else {
+        customApps.splice(index, 1);
+        localStorage.setItem('customApps', JSON.stringify(customApps));
+    }
+    render();
 }
 
 function render(){
@@ -180,9 +206,17 @@ function render(){
   gamesEl.innerHTML = '';
   appsEl.innerHTML = '';
 
-  // Render original + custom
-  [...defaultGames, ...customGames].filter(x=>x.title.toLowerCase().includes(q)).forEach(x=>gamesEl.appendChild(card(x)));
-  [...defaultApps, ...customApps].filter(x=>x.title.toLowerCase().includes(q)).forEach(x=>appsEl.appendChild(card(x)));
+  // Render Built-ins
+  defaultGames.filter(x=>x.title.toLowerCase().includes(q)).forEach(x=>gamesEl.appendChild(card(x, -1, false, 'games')));
+  defaultApps.filter(x=>x.title.toLowerCase().includes(q)).forEach(x=>appsEl.appendChild(card(x, -1, false, 'apps')));
+
+  // Render Customs
+  customGames.forEach((x, i) => {
+      if(x.title.toLowerCase().includes(q)) gamesEl.appendChild(card(x, i, true, 'games'));
+  });
+  customApps.forEach((x, i) => {
+      if(x.title.toLowerCase().includes(q)) appsEl.appendChild(card(x, i, true, 'apps'));
+  });
 }
 
 function addCustom() {
