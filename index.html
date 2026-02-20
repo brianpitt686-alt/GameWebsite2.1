@@ -102,9 +102,9 @@
     </div>
   </main>
 
-<script>
+
+  <script>
 // Original Data
-  
 const defaultGames = [
   { title:"Drive Mad", thumb:"https://static.wikia.nocookie.net/a-literal/images/a/a5/Fancade-image.jpeg", url:"https://bighummus69.github.io/simplegimes/drive-mad/index.html" },
   { title: "Five Nights at Epistiens", thumb: "https://robbrainrot.io/data/image/Five-Nights-at-Epsteins.jpg", url: "https://github.com/brianpitt686-alt/FNAE" },
@@ -124,6 +124,7 @@ const defaultGames = [
   { title:"OvO", thumb:"https://brainide.com/wp-content/uploads/thumbs/custom/O/OvO-online-game.webp", url:"https://bighummus69.github.io/0v0" },
   { title:"Glass City", thumb:"https://1kh0.github.io/projects/glass-city/cover.jpg", url:"https://1kh0.github.io/projects/glass-city/index.html" }
 ];
+
 const defaultApps = [
   { title:"Browser", thumb:"https://cdn.vectorstock.com/i/1000v/78/41/browser-icon-white-background-vector-20757841.jpg", url:"https://nonpacifiable-jacquelynn-dobsonfly.ngrok-free.dev/" },
   { title:"Calculator", thumb:"https://cdn-icons-png.flaticon.com/512/992/992651.png", url:"https://www.desmos.com/scientific" }
@@ -145,6 +146,7 @@ function openAboutBlank(item) {
   doc.close();
 }
 
+/* ✨ UPDATED createCard WITH ANIMATION */
 function createCard(item, index, isCustom, type) {
   const container = document.createElement('div');
   container.className = 'card-container';
@@ -154,7 +156,17 @@ function createCard(item, index, isCustom, type) {
   const thumbUrl = item.thumb || 'https://cdn.vectorstock.com/i/1000v/78/41/browser-icon-white-background-vector-20757841.jpg';
   d.innerHTML = `<div class="thumb" style="background-image:url('${thumbUrl}')"></div><div class="title">${item.title}</div>`;
   d.onclick = () => openAboutBlank(item);
-  
+
+  /* ✨ animation setup */
+  d.style.opacity = "0";
+  d.style.transform = "translateY(20px) scale(0.95)";
+  d.style.transition = "all 0.35s ease";
+
+  setTimeout(() => {
+    d.style.opacity = "1";
+    d.style.transform = "translateY(0) scale(1)";
+  }, 50);
+
   container.appendChild(d);
 
   if(isCustom) {
@@ -183,16 +195,27 @@ function deleteItem(index, type) {
   render();
 }
 
+/* ✨ Updated render with smooth refresh */
 function render() {
   const q = search.value.toLowerCase();
   gamesEl.innerHTML = '';
   appsEl.innerHTML = '';
 
-  defaultGames.filter(x=>x.title.toLowerCase().includes(q)).forEach(x=>gamesEl.appendChild(createCard(x, -1, false, 'games')));
-  defaultApps.filter(x=>x.title.toLowerCase().includes(q)).forEach(x=>appsEl.appendChild(createCard(x, -1, false, 'apps')));
+  defaultGames.filter(x=>x.title.toLowerCase().includes(q))
+    .forEach((x,i)=>gamesEl.appendChild(createCard(x, i, false, 'games')));
 
-  customGames.forEach((x, i) => { if(x.title.toLowerCase().includes(q)) gamesEl.appendChild(createCard(x, i, true, 'games')); });
-  customApps.forEach((x, i) => { if(x.title.toLowerCase().includes(q)) appsEl.appendChild(createCard(x, i, true, 'apps')); });
+  defaultApps.filter(x=>x.title.toLowerCase().includes(q))
+    .forEach((x,i)=>appsEl.appendChild(createCard(x, i, false, 'apps')));
+
+  customGames.forEach((x, i) => {
+    if(x.title.toLowerCase().includes(q))
+      gamesEl.appendChild(createCard(x, i, true, 'games'));
+  });
+
+  customApps.forEach((x, i) => {
+    if(x.title.toLowerCase().includes(q))
+      appsEl.appendChild(createCard(x, i, true, 'apps'));
+  });
 }
 
 function addCustom() {
@@ -216,19 +239,29 @@ function addCustom() {
   document.getElementById('custThumb').value = '';
 }
 
+/* ✨ Smooth tab animation */
 document.getElementById('tab-games').onclick = () => {
   document.getElementById('tab-games').classList.add('active');
   document.getElementById('tab-apps').classList.remove('active');
-  gamesEl.style.display = 'grid'; appsEl.style.display = 'none';
+  gamesEl.style.opacity = "0";
+  setTimeout(() => {
+    gamesEl.style.display = 'grid';
+    appsEl.style.display = 'none';
+    gamesEl.style.opacity = "1";
+  }, 150);
 };
+
 document.getElementById('tab-apps').onclick = () => {
   document.getElementById('tab-apps').classList.add('active');
   document.getElementById('tab-games').classList.remove('active');
-  appsEl.style.display = 'grid'; gamesEl.style.display = 'none';
+  appsEl.style.opacity = "0";
+  setTimeout(() => {
+    appsEl.style.display = 'grid';
+    gamesEl.style.display = 'none';
+    appsEl.style.opacity = "1";
+  }, 150);
 };
 
 search.addEventListener('input', render);
 render();
 </script>
-</body>
-</html>
