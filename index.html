@@ -7,13 +7,36 @@
   <link rel="icon" type="image/png" href="favicon.png">
   <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#4fd1ff">
+  <select id="themeSelect" class="search" style="max-width:160px">
+  <option value="neon">Neon</option>
+  <option value="cyber">Cyber</option>
+  <option value="sunset">Sunset</option>
+  <option value="ocean">Ocean</option>
+  <option value="forest">Forest</option>
+  <option value="midnight">Midnight</option>
+  <option value="lava">Lava</option>
+  <option value="cotton">Cotton Candy</option>
+  <option value="matrix">Matrix</option>
+  <option value="mono">Mono</option>
+</select>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600&display=swap" rel="stylesheet">
   <style>
-    :root{
-      --neon:#4fd1ff;
-      --bg1:#05080f;
-      --bg2:#0c1b2e;
-    }
+    :root {
+  --neon: #4fd1ff;
+  --bg1: #05080f;
+  --bg2: #0c1b2e;
+}
+    [data-theme="neon"]     { --neon:#4fd1ff; --bg1:#05080f; --bg2:#0c1b2e; }
+[data-theme="cyber"]    { --neon:#ff4fd8; --bg1:#0a0014; --bg2:#220033; }
+[data-theme="sunset"]   { --neon:#ff9f1c; --bg1:#1b0b0b; --bg2:#3b0f0f; }
+[data-theme="ocean"]    { --neon:#00e5ff; --bg1:#02131a; --bg2:#04364a; }
+[data-theme="forest"]   { --neon:#6bff8a; --bg1:#06140a; --bg2:#0c2b16; }
+[data-theme="midnight"] { --neon:#7aa2ff; --bg1:#02040f; --bg2:#050a30; }
+[data-theme="lava"]     { --neon:#ff3b3b; --bg1:#160000; --bg2:#3a0000; }
+[data-theme="cotton"]   { --neon:#ff7ad9; --bg1:#160014; --bg2:#2a0030; }
+[data-theme="matrix"]   { --neon:#00ff88; --bg1:#000900; --bg2:#001f00; }
+[data-theme="mono"]     { --neon:#ffffff; --bg1:#050505; --bg2:#121212; }
+    
     *{box-sizing:border-box;margin:0;padding:0;font-family:"Orbitron",sans-serif}
     body{
       min-height:100vh;
@@ -270,4 +293,17 @@ render();
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js');
 }
+   const themeSelect = document.getElementById("themeSelect");
+
+// Load saved theme
+const savedTheme = localStorage.getItem("theme") || "neon";
+document.documentElement.setAttribute("data-theme", savedTheme);
+themeSelect.value = savedTheme;
+
+// Change theme
+themeSelect.addEventListener("change", () => {
+  const theme = themeSelect.value;
+  document.documentElement.setAttribute("data-theme", theme);
+  localStorage.setItem("theme", theme);
+}); 
 </script>
