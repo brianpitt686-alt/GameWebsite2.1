@@ -1,5 +1,83 @@
-// Load hidden games from localStorage to keep them "uninstalled" after refresh
-let uninstalledGames = JSON.parse(localStorage.getItem('uninstalledGames') || "[]");
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IXL</title>
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --neon:#4fd1ff;
+      --bg1:#05080f;
+      --bg2:#0c1b2e;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;font-family:"Orbitron",sans-serif}
+    body{
+      min-height:100vh;
+      color:#e9f7ff;
+      background: radial-gradient(1200px 600px at 10% -10%, #0b2545 0%, transparent 60%),
+                  linear-gradient(135deg, var(--bg1), var(--bg2));
+    }
+    header{
+      position:sticky;top:0;z-index:10;
+      backdrop-filter: blur(10px);
+      background: rgba(0,0,0,.6);
+      border-bottom:1px solid rgba(255,255,255,.08);
+      padding:16px 24px;
+      display:flex;align-items:center;gap:16px;justify-content:space-between;
+    }
+    .brand{display:flex;align-items:center;gap:10px}
+    .brand img{height:28px}
+    .brand h1{color:var(--neon);letter-spacing:2px;font-size:22px}
+    .actions{display:flex;gap:10px;align-items:center}
+    .search{
+      background:#0b1220;border:1px solid rgba(79,209,255,.25);
+      border-radius:12px;padding:8px 12px;color:var(--neon);outline:none;min-width:220px;
+    }
+    .tabs{display:flex;gap:8px}
+    .tab{padding:8px 12px;border-radius:10px;border:1px solid rgba(79,209,255,.25);cursor:pointer}
+    .tab.active,.tab:hover{background:var(--neon);color:#00131f}
+    main{padding:24px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:16px}
+    .card{
+      background:linear-gradient(180deg, rgba(20,32,50,.9), rgba(10,16,30,.9));
+      border:1px solid rgba(79,209,255,.25);
+      border-radius:16px;padding:12px;cursor:pointer;
+      box-shadow:0 0 0 rgba(79,209,255,0);
+      transition:transform .2s ease, box-shadow .2s ease, border .2s ease;
+    }
+    .card:hover{transform:translateY(-4px) scale(1.02);box-shadow:0 10px 30px rgba(79,209,255,.25);border-color:var(--neon)}
+    .thumb{height:120px;border-radius:12px;background:#0b1220 center/cover no-repeat;margin-bottom:10px}
+    .title{text-align:center;font-size:13px;color:#cdefff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .footer{opacity:.6;text-align:center;padding:16px}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <img src="favicon.png" alt="IXL"/>
+      <h1>IXL</h1>
+    </div>
+    <div class="actions">
+      <input id="search" class="search" placeholder="Search games..."/>
+      <div class="tabs">
+        <div id="tab-games" class="tab active">Games</div>
+        <div id="tab-apps" class="tab">Apps</div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div id="games" class="grid"></div>
+    <div id="apps" class="grid" style="display:none"></div>
+  </main>
+
+  <div class="footer">Clicking a game uninstalls it and opens it in a new about:blank tab.</div>
+
+<script>
+// Logic to track "uninstalled" items locally
+let uninstalled = JSON.parse(localStorage.getItem('uninstalledList') || "[]");
 
 const gamesData = [
   { title:"Drive Mad", thumb:"https://static.wikia.nocookie.net/a-literal/images/a/a5/Fancade-image.jpeg", url:"https://www.drivemad.com/" },
@@ -29,53 +107,61 @@ const search  = document.getElementById('search');
 const tabGames= document.getElementById('tab-games');
 const tabApps = document.getElementById('tab-apps');
 
-function card(item) {
-  const d = document.createElement('div');
-  d.className = 'card';
-  d.innerHTML = `<div class="thumb" style="background-image:url('${item.thumb}')"></div><div class="title">${item.title}</div>`;
-  
-  // Single click now uninstalls and opens in about:blank
-  d.onclick = () => {
-    // 1. "Uninstall" logic (Remove from view and save to local storage)
-    uninstalledGames.push(item.url);
-    localStorage.setItem('uninstalledGames', JSON.stringify(uninstalledGames));
-    render();
+function openInBlank(item) {
+  const w = window.open('about:blank', '_blank');
+  if(!w) return;
+  const doc = w.document;
+  doc.open();
+  doc.write(`<!DOCTYPE html>
+    <html><head><title>${item.title}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <style>html,body{margin:0;height:100%;background:#000}iframe{border:0;width:100%;height:100%}</style>
+    </head><body>
+    <iframe src="${item.url}" allow="fullscreen; autoplay; gamepad"></iframe>
+    </body></html>`);
+  doc.close();
+}
 
-    // 2. Open in about:blank immediately
-    const w = window.open('about:blank', '_blank');
-    if(!w) return;
-    const doc = w.document;
-    doc.open();
-    doc.write(`<!DOCTYPE html>
-      <html><head><title>${item.title}</title>
-      <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-      <style>html,body{margin:0;height:100%;background:#000}iframe{border:0;width:100%;height:100%}</style>
-      </head><body>
-      <iframe src="${item.url}" allow="fullscreen; autoplay; gamepad"></iframe>
-      </body></html>`);
-    doc.close();
+function card(item){
+  const d=document.createElement('div');
+  d.className='card';
+  d.innerHTML=`<div class="thumb" style="background-image:url('${item.thumb}')"></div><div class="title">${item.title}</div>`;
+  
+  // Single left click uninstalls and launches
+  d.onclick = () => {
+    // Uninstall logic: Add to uninstalled list and save
+    uninstalled.push(item.url);
+    localStorage.setItem('uninstalledList', JSON.stringify(uninstalled));
+    
+    // Launch logic: Open in about:blank
+    openInBlank(item);
+    
+    // Refresh the grid
+    render();
   };
   return d;
 }
 
-function render() {
-  const q = search.value.toLowerCase();
-  gamesEl.innerHTML = '';
-  appsEl.innerHTML = '';
-
-  // Filter out items that have been "uninstalled"
+function render(){
+  const q=search.value.toLowerCase();
+  gamesEl.innerHTML='';
+  appsEl.innerHTML='';
+  
+  // Only render items not in the uninstalled list
   gamesData
-    .filter(x => x.title.toLowerCase().includes(q) && !uninstalledGames.includes(x.url))
+    .filter(x => x.title.toLowerCase().includes(q) && !uninstalled.includes(x.url))
     .forEach(x => gamesEl.appendChild(card(x)));
     
   appsData
-    .filter(x => x.title.toLowerCase().includes(q) && !uninstalledGames.includes(x.url))
+    .filter(x => x.title.toLowerCase().includes(q) && !uninstalled.includes(x.url))
     .forEach(x => appsEl.appendChild(card(x)));
 }
 
 tabGames.onclick=()=>{ tabGames.classList.add('active'); tabApps.classList.remove('active'); gamesEl.style.display='grid'; appsEl.style.display='none'; };
 tabApps.onclick =()=>{ tabApps.classList.add('active'); tabGames.classList.remove('active'); appsEl.style.display='grid'; gamesEl.style.display='none'; };
 
-search.addEventListener('input', render);
+search.addEventListener('input',render);
 render();
 </script>
+</body>
+</html>
