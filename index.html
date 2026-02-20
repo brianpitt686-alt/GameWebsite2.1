@@ -39,28 +39,46 @@
     .tab{padding:8px 12px;border-radius:10px;border:1px solid rgba(79,209,255,.25);cursor:pointer}
     .tab.active,.tab:hover{background:var(--neon);color:#00131f}
     main{padding:24px}
-    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:16px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill, minmax(180px, 1fr));gap:16px}
+    .card-container{position: relative;}
     .card{
       background:linear-gradient(180deg, rgba(20,32,50,.9), rgba(10,16,30,.9));
       border:1px solid rgba(79,209,255,.25);
       border-radius:16px;padding:12px;cursor:pointer;
-      box-shadow:0 0 0 rgba(79,209,255,0);
       transition:transform .2s ease, box-shadow .2s ease, border .2s ease;
+      height: 100%;
     }
     .card:hover{transform:translateY(-4px) scale(1.02);box-shadow:0 10px 30px rgba(79,209,255,.25);border-color:var(--neon)}
     .thumb{height:120px;border-radius:12px;background:#0b1220 center/cover no-repeat;margin-bottom:10px}
     .title{text-align:center;font-size:13px;color:#cdefff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .footer{opacity:.6;text-align:center;padding:16px}
+    
+    .uninstall-btn {
+      position: absolute; top: -5px; right: -5px; background: #ff4f4f; color: white;
+      border: none; border-radius: 50%; width: 24px; height: 24px; font-size: 14px;
+      cursor: pointer; z-index: 5; display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 0 10px rgba(255,79,79,0.5);
+    }
+
+    .creator-panel {
+      background: rgba(255,255,255,0.03); border: 1px dashed var(--neon);
+      border-radius: 16px; padding: 20px; margin-top: 30px;
+    }
+    .creator-inputs { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 15px; }
+    .creator-inputs input, .creator-inputs select { 
+      flex: 1; min-width: 150px; padding: 10px; border-radius: 8px; 
+      border: 1px solid rgba(79,209,255,0.2); background: #0b1220; color: white; 
+    }
+    .add-btn {
+      background: var(--neon); color: #00131f; border: none; padding: 10px 20px; 
+      border-radius: 8px; cursor: pointer; font-weight: bold;
+    }
   </style>
 </head>
 <body>
   <header>
-    <div class="brand">
-      <img src="favicon.png" alt="IXL"/>
-      <h1>IXL</h1>
-    </div>
+    <div class="brand"><img src="favicon.png" alt="IXL"/><h1>IXL</h1></div>
     <div class="actions">
-      <input id="search" class="search" placeholder="Search games..."/>
+      <input id="search" class="search" placeholder="Search..."/>
       <div class="tabs">
         <div id="tab-games" class="tab active">Games</div>
         <div id="tab-apps" class="tab">Apps</div>
@@ -71,15 +89,22 @@
   <main>
     <div id="games" class="grid"></div>
     <div id="apps" class="grid" style="display:none"></div>
+
+    <div class="creator-panel">
+      <h3 style="color: var(--neon)">+ Add Custom App</h3>
+      <div class="creator-inputs">
+        <input type="text" id="custTitle" placeholder="Name">
+        <input type="text" id="custUrl" placeholder="URL">
+        <input type="text" id="custThumb" placeholder="Thumbnail URL">
+        <select id="custType"><option value="games">Game</option><option value="apps">App</option></select>
+        <button class="add-btn" onclick="addCustom()">Add</button>
+      </div>
+    </div>
   </main>
 
-  <div class="footer">Clicking a game uninstalls it and opens it in a new about:blank tab.</div>
-
 <script>
-// Logic to track "uninstalled" items locally
-let uninstalled = JSON.parse(localStorage.getItem('uninstalledList') || "[]");
-
-const gamesData = [
+// Original Data
+const defaultGames = [
   { title:"Drive Mad", thumb:"https://static.wikia.nocookie.net/a-literal/images/a/a5/Fancade-image.jpeg", url:"https://www.drivemad.com/" },
   { title:"NZ Portable", thumb:"https://cdn2.steamgriddb.com/icon_thumb/b7aaa86c38d234cc610036399a71f08a.png", url:"https://nzp.gay/" },
   { title:"Crossy Road", thumb:"https://upload.wikimedia.org/wikipedia/en/7/71/Crossy_Road_icon.jpeg", url:"https://bighummus69.github.io/simplegimes/crossyroad/index.html" },
@@ -96,71 +121,110 @@ const gamesData = [
   { title:"Glass City", thumb:"https://1kh0.github.io/projects/glass-city/cover.jpg", url:"https://1kh0.github.io/projects/glass-city/index.html" }
 ];
 
-const appsData = [
+const defaultApps = [
   { title:"Browser", thumb:"https://cdn.vectorstock.com/i/1000v/78/41/browser-icon-white-background-vector-20757841.jpg", url:"https://nonpacifiable-jacquelynn-dobsonfly.ngrok-free.dev/" },
   { title:"Calculator", thumb:"https://cdn-icons-png.flaticon.com/512/992/992651.png", url:"https://www.desmos.com/scientific" }
 ];
 
+let customGames = JSON.parse(localStorage.getItem('customGames')) || [];
+let customApps = JSON.parse(localStorage.getItem('customApps')) || [];
+
 const gamesEl = document.getElementById('games');
 const appsEl  = document.getElementById('apps');
 const search  = document.getElementById('search');
-const tabGames= document.getElementById('tab-games');
-const tabApps = document.getElementById('tab-apps');
 
-function openInBlank(item) {
+function openAboutBlank(item) {
   const w = window.open('about:blank', '_blank');
-  if(!w) return;
+  if(!w) return alert("Pop-up blocked! Please allow pop-ups for this site.");
   const doc = w.document;
   doc.open();
-  doc.write(`<!DOCTYPE html>
-    <html><head><title>${item.title}</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <style>html,body{margin:0;height:100%;background:#000}iframe{border:0;width:100%;height:100%}</style>
-    </head><body>
-    <iframe src="${item.url}" allow="fullscreen; autoplay; gamepad"></iframe>
-    </body></html>`);
+  doc.write(`<!DOCTYPE html><html><head><title>${item.title}</title><meta name="viewport" content="width=device-width, initial-scale=1.0"/><style>html,body{margin:0;height:100%;background:#000}iframe{border:0;width:100%;height:100%}</style></head><body><iframe src="${item.url}" allow="fullscreen; autoplay; gamepad"></iframe></body></html>`);
   doc.close();
 }
 
-function card(item){
-  const d=document.createElement('div');
-  d.className='card';
-  d.innerHTML=`<div class="thumb" style="background-image:url('${item.thumb}')"></div><div class="title">${item.title}</div>`;
+function createCard(item, index, isCustom, type) {
+  const container = document.createElement('div');
+  container.className = 'card-container';
   
-  // Single left click uninstalls and launches
-  d.onclick = () => {
-    // Uninstall logic: Add to uninstalled list and save
-    uninstalled.push(item.url);
-    localStorage.setItem('uninstalledList', JSON.stringify(uninstalled));
-    
-    // Launch logic: Open in about:blank
-    openInBlank(item);
-    
-    // Refresh the grid
-    render();
-  };
-  return d;
+  const d = document.createElement('div');
+  d.className = 'card';
+  const thumbUrl = item.thumb || 'https://cdn.vectorstock.com/i/1000v/78/41/browser-icon-white-background-vector-20757841.jpg';
+  d.innerHTML = `<div class="thumb" style="background-image:url('${thumbUrl}')"></div><div class="title">${item.title}</div>`;
+  d.onclick = () => openAboutBlank(item);
+  
+  container.appendChild(d);
+
+  if(isCustom) {
+    const delBtn = document.createElement('button');
+    delBtn.className = 'uninstall-btn';
+    delBtn.innerHTML = '×';
+    delBtn.title = 'Uninstall';
+    delBtn.onclick = (e) => {
+      e.stopPropagation();
+      if(confirm(`Uninstall "${item.title}"?`)) deleteItem(index, type);
+    };
+    container.appendChild(delBtn);
+  }
+  
+  return container;
 }
 
-function render(){
-  const q=search.value.toLowerCase();
-  gamesEl.innerHTML='';
-  appsEl.innerHTML='';
-  
-  // Only render items not in the uninstalled list
-  gamesData
-    .filter(x => x.title.toLowerCase().includes(q) && !uninstalled.includes(x.url))
-    .forEach(x => gamesEl.appendChild(card(x)));
-    
-  appsData
-    .filter(x => x.title.toLowerCase().includes(q) && !uninstalled.includes(x.url))
-    .forEach(x => appsEl.appendChild(card(x)));
+function deleteItem(index, type) {
+  if(type === 'games') {
+    customGames.splice(index, 1);
+    localStorage.setItem('customGames', JSON.stringify(customGames));
+  } else {
+    customApps.splice(index, 1);
+    localStorage.setItem('customApps', JSON.stringify(customApps));
+  }
+  render();
 }
 
-tabGames.onclick=()=>{ tabGames.classList.add('active'); tabApps.classList.remove('active'); gamesEl.style.display='grid'; appsEl.style.display='none'; };
-tabApps.onclick =()=>{ tabApps.classList.add('active'); tabGames.classList.remove('active'); appsEl.style.display='grid'; gamesEl.style.display='none'; };
+function render() {
+  const q = search.value.toLowerCase();
+  gamesEl.innerHTML = '';
+  appsEl.innerHTML = '';
 
-search.addEventListener('input',render);
+  defaultGames.filter(x=>x.title.toLowerCase().includes(q)).forEach(x=>gamesEl.appendChild(createCard(x, -1, false, 'games')));
+  defaultApps.filter(x=>x.title.toLowerCase().includes(q)).forEach(x=>appsEl.appendChild(createCard(x, -1, false, 'apps')));
+
+  customGames.forEach((x, i) => { if(x.title.toLowerCase().includes(q)) gamesEl.appendChild(createCard(x, i, true, 'games')); });
+  customApps.forEach((x, i) => { if(x.title.toLowerCase().includes(q)) appsEl.appendChild(createCard(x, i, true, 'apps')); });
+}
+
+function addCustom() {
+  const title = document.getElementById('custTitle').value;
+  const url = document.getElementById('custUrl').value;
+  const thumb = document.getElementById('custThumb').value;
+  const type = document.getElementById('custType').value;
+  if(!title || !url) return alert("Please enter Name and URL");
+
+  const newItem = { title, url, thumb };
+  if(type === 'games') {
+    customGames.push(newItem);
+    localStorage.setItem('customGames', JSON.stringify(customGames));
+  } else {
+    customApps.push(newItem);
+    localStorage.setItem('customApps', JSON.stringify(customApps));
+  }
+  render();
+  document.getElementById('custTitle').value = '';
+  document.getElementById('custUrl').value = '';
+  document.getElementById('custThumb').value = '';
+}
+
+document.getElementById('tab-games').onclick = () => {
+  document.getElementById('tab-games').classList.add('active');
+  document.getElementById('tab-apps').classList.remove('active');
+  gamesEl.style.display = 'grid'; appsEl.style.display = 'none';
+};
+document.getElementById('tab-apps').onclick = () => {
+  document.getElementById('tab-apps').classList.add('active');
+  document.getElementById('tab-games').classList.remove('active');
+  appsEl.style.display = 'grid'; gamesEl.style.display = 'none';
+};
+
+search.addEventListener('input', render);
 render();
 </script>
 </body>
